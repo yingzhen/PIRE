@@ -1,0 +1,25 @@
+#quality check
+zcat TSRH001_R1.fq.gz | fastqc stdin
+zcat TSRH001_R2.fq.gz | fastqc stdin
+
+#trim adapters and trim PE reads by quality
+trim_galore -q 20 --paired --length 30 --retain_unpaired TSRH001_R1.fq.gz TSRH001_R2.fq.gz
+zcat TSRH001_R1_val_1.fq.gz | wc -l
+zcat TSRH001_R2_val_2.fq.gz | wc -l
+
+#trinity
+####this need high mem and ~36hr
+####-l h_data=128G,highmem,time=24:00:00,exclusive
+module load bowtie
+module load samtools
+
+cd ~/bin/trinityrnaseq_r20140717/
+./Trinity --seqType fq --JM 60G --left ~/PIRE/AVirens/RNAseq/TSRH001_R1_val_1.fq.gz --right ~/PIRE/AVirens/RNAseq/TSRH001_R2_val_2.fq.gz -o $SCRATCH/greenbul-all-trinity-out --CPU 12
+
+#stats for the assembly
+perl ~/bin/trinityrnaseq_r20140717/util/TrinityStats.pl /u/scratch/z/zhen/greenbul-all-trinity-out/Trinity.fasta > greenbul-trinity-stats
+perl ~/bin/trinityrnaseq_r20140717/util/bowtie_PE_separate_then_join.pl --seqType fq --left ~/PIRE/AVirens/RNAseq/TSRH001_R1_val_1.fq.gz --right ~/PIRE/AVirens/RNAseq/TSRH001_R2_val_2.fq.gz -o $SCRATCH/greenbul-bowtie-out --target /u/scratch/z/zhen/greenbul-all-trinity-out/Trinity.fasta --aligner bowtie -- -p 4 --all --best --strata -m 300
+perl ~/bin/trinityrnaseq_r20140717/util/SAM_nameSorted_to_uniq_count_stats.pl /u/scratch/z/zhen/greenbul-bowtie-out/greenbul-bowtie-out.nameSorted.bam > greenbul-bowtie-stats
+
+#predict cds
+~/bin/trinityrnaseq_r20140717/trinity-plugins/transdecoder/TransDecoder -t $SCRATCH/greenbul-all-trinity-out/Trinity.fasta
