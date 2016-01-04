@@ -1,0 +1,18 @@
+/u/home/z/zhen/nobackup-klohmuel/mice
+
+zcat TSKR014_S0_L001_R1_001.fastq.gz | fastqc stdin
+zcat TSKR014_S0_L001_R2_001.fastq.gz | fastqc stdin
+
+#demultiplex & remove phiX (~192M mem, ~12.5hr)
+mkdir process_radtags-mice-RAD1
+~/bin/stacks1.32/bin/process_radtags -P -p /u/home/z/zhen/nobackup-klohmuel/mice/data  -o ./process_radtags-mice-RAD1 -b barcodes-mice-plate1 -e sbfI -r -c -q -i gzfastq --adapter_1 GATCGGAAGAGCGGTTCAGCAGGAATGCCGAGACCGA --adapter_2 AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT
+
+#remove duplicates (~7G mem, ~2hr)
+mkdir mice-RAD1-duprm
+cd process_radtags-mice-RAD1
+mkdir unpaired
+mv *rem* unpaired
+for sample in `ls *1.fq.gz | cut -f1 -d'.'`
+do
+     ~/bin/stacks1.32/bin/clone_filter -1 $sample.1.fq.gz -2 $sample.2.fq.gz -i gzfastq -o ../mice-RAD1-duprm
+done
